@@ -24,14 +24,14 @@ public class StatisticsService {
         stats.setTotalDevices(deviceRepository.countByUserId(userId));
         stats.setOnlineDevices(deviceRepository.countOnlineByUserId(userId));
         stats.setUnreadAlerts(alertRepository.countUnreadByUserId(userId));
-        
-        // 按类型统计设备
+        // 位置：getUserStatistics 方法内
+        // 按类型统计设备（饼图核心数据）
         Map<String, Long> devicesByType = new HashMap<>();
         deviceRepository.countByTypeForUser(userId).forEach(row -> 
             devicesByType.put((String) row[0], (Long) row[1]));
         stats.setDevicesByType(devicesByType);
-        
-        // 每月警报统计（最近12个月）
+        // 位置：getUserStatistics 方法内
+        // 每月警报统计（最近12个月，柱状图核心数据）
         LocalDateTime startDate = LocalDateTime.now().minusMonths(12);
         List<Map<String, Object>> monthlyAlerts = alertRepository.getMonthlyAlertStats(userId, startDate).stream()
             .map(row -> {
@@ -42,8 +42,8 @@ public class StatisticsService {
                 return m;
             }).collect(Collectors.toList());
         stats.setMonthlyAlerts(monthlyAlerts);
-        
-        // 设备命令执行频率（30天内）
+
+        // 设备命令执行频率（30天内，频率图核心数据）
         LocalDateTime last30Days = LocalDateTime.now().minusDays(30);
         List<Map<String, Object>> cmdFreq = commandRepository.getCommandFrequency(userId, last30Days).stream()
             .map(row -> {

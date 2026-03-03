@@ -11,12 +11,14 @@ import javax.validation.Valid;
 public class AuthController {
     @Autowired
     private UserService userService;
-    
+    //用户注册模块
+    //用户注册接口（新用户创建账号）
     @PostMapping("/register")
     public ApiResponse<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ApiResponse.success(userService.register(request));
     }
-    
+    //用户登录模块
+    //用户登录接口（验证账号密码并生成JWT令牌）
     @PostMapping("/login")
     public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.success(userService.login(request));

@@ -17,13 +17,14 @@ public class UserController {
     private UserService userService;
     @Autowired
     private LogService logService;
-    
+    //通知偏好管理模块
+    //查询当前登录用户的所有通知偏好设置（如设备告警、场景提醒、系统通知等类型的开关）
     @GetMapping("/preferences")
     public ApiResponse<List<NotificationPreferenceDTO>> getNotificationPreferences(Authentication auth) {
         Long userId = (Long) auth.getPrincipal();
         return ApiResponse.success(userService.getNotificationPreferences(userId));
     }
-    
+    //更新当前登录用户指定类型的通知偏好开关状态
     @PutMapping("/preferences")
     public ApiResponse<Void> updateNotificationPreference(Authentication auth, @RequestBody Map<String, Object> body) {
         Long userId = (Long) auth.getPrincipal();
@@ -32,7 +33,8 @@ public class UserController {
         userService.updateNotificationPreference(userId, type, enabled);
         return ApiResponse.success("通知偏好已更新", null);
     }
-    
+    //个人日志查询模块
+    //分页查询当前登录用户的操作日志（和/api/logs接口功能一致，属于用户中心入口）
     @GetMapping("/logs")
     public ApiResponse<org.springframework.data.domain.Page<com.example.smart_home.dto.LogDTO>> getMyLogs(
             Authentication auth,

@@ -187,7 +187,7 @@ public class DeviceService {
         
         return dto;
     }
-    
+    // 核心阈值判断逻辑
     private void checkThresholdAndAlert(Device device, Double value, User user) {
         boolean exceeded = false;
         String message = "";
@@ -202,7 +202,7 @@ public class DeviceService {
             threshold = device.getThresholdMin();
             message = device.getName() + " 数值(" + value + ")低于最小阈值(" + device.getThresholdMin() + ")";
         }
-        
+        // 超限后的动作：创建警报、推送通知、记录日志
         if (exceeded) {
             // 创建警报
             Alert alert = new Alert();

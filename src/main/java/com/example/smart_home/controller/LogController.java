@@ -14,7 +14,8 @@ import org.springframework.web.bind.annotation.*;
 public class LogController {
     @Autowired
     private LogService logService;
-    
+    //日志查询模块
+    //分页查询当前登录用户的所有操作日志（如设备控制、反馈提交、账号操作等）
     @GetMapping
     public ApiResponse<Page<LogDTO>> getMyLogs(Authentication auth,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {

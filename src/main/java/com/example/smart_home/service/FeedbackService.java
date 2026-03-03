@@ -29,7 +29,7 @@ public class FeedbackService {
     public Page<FeedbackDTO> getAllFeedbacks(Pageable pageable) {
         return feedbackRepository.findAllByOrderByCreatedAtDesc(pageable).map(this::toDTO);
     }
-    
+    //
     @Transactional
     public FeedbackDTO createFeedback(Long userId, String title, String content) {
         Feedback feedback = new Feedback();

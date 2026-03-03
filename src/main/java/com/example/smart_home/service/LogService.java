@@ -26,7 +26,7 @@ public class LogService {
         log.setIpAddress(ip);
         logRepository.save(log);
     }
-    
+    //
     public Page<LogDTO> getUserLogs(Long userId, Pageable pageable) {
         return logRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable).map(this::toDTO);
     }

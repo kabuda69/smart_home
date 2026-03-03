@@ -35,7 +35,7 @@ public class ShareService {
         if (!device.getUser().getId().equals(userId)) {
             throw new RuntimeException("无权分享此设备");
         }
-        
+        //
         Map<String, Object> statusData = new HashMap<>();
         statusData.put("deviceName", device.getName());
         statusData.put("typeName", device.getDeviceType().getName());

@@ -13,14 +13,16 @@ import java.util.Map;
 public class FeedbackController {
     @Autowired
     private FeedbackService feedbackService;
-    
+    //反馈查询模块
+    //查询当前登录用户提交的所有反馈列表
     @GetMapping
     public ApiResponse<java.util.List<FeedbackDTO>> getMyFeedbacks(Authentication auth) {
         Long userId = (Long) auth.getPrincipal();
         // 返回List而不是Page，前端更容易处理
         return ApiResponse.success(feedbackService.getUserFeedbackList(userId));
     }
-    
+    //反馈提交模块
+    //当前登录用户提交新的反馈意见
     @PostMapping
     public ApiResponse<FeedbackDTO> createFeedback(Authentication auth, @RequestBody Map<String, String> body) {
         Long userId = (Long) auth.getPrincipal();

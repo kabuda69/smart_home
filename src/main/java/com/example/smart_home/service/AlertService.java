@@ -25,7 +25,7 @@ public class AlertService {
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
-    
+    //
     @Transactional
     public void markAsRead(Long alertId, Long userId) {
         Alert alert = alertRepository.findById(alertId)

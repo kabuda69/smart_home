@@ -46,7 +46,7 @@ public class SceneService {
         return toDTO(sceneRepository.findById(sceneId)
                 .orElseThrow(() -> new RuntimeException("场景不存在")));
     }
-    
+    //
     @Transactional
     public SceneDTO createScene(Long userId, SceneDTO dto) {
         User user = userRepository.findById(userId)
@@ -132,32 +132,36 @@ public class SceneService {
             throw new RuntimeException("无权激活此场景");
         }
         
-        // 先停用当前激活的场景
+        // 先停用当前激活的场景（前置逻辑）
         sceneRepository.findByUserIdAndIsActiveTrue(userId).ifPresent(s -> {
             s.setIsActive(false);
             sceneRepository.save(s);
         });
         
-        // 激活新场景
+        // 激活新场景（状态标记）
         scene.setIsActive(true);
         sceneRepository.save(scene);
         
-        // 执行场景中的所有动作
+        // 执批量命令执行开始
+        // 1. 获取该场景下的所有动作（按执行顺序排序）
         List<SceneAction> actions = sceneActionRepository.findBySceneIdOrderBySortOrder(sceneId);
+        // 2. 批量遍历执行（核心循环：逐个执行每个设备命令）
         for (SceneAction action : actions) {
             try {
+                // 3. 构建设备命令请求（复用DeviceService的命令格式）
                 CommandRequest cmd = new CommandRequest();
                 cmd.setDeviceId(action.getDevice().getId());
                 cmd.setCommandType(action.getActionType());
                 cmd.setCommandValue(action.getActionValue());
+                // 4. 调用DeviceService执行单个命令（批量的核心：循环调用=批量）
                 deviceService.executeCommand(userId, cmd);
             } catch (Exception e) {
-                // 记录错误但继续执行其他动作
+                // 5.记录错误但继续执行其他动作
                 logService.log(userId, "SCENE_ACTION_ERROR", 
                         "场景动作执行失败: " + action.getDevice().getName() + " - " + e.getMessage(), null);
             }
         }
-        
+        //批量命令执行结束
         logService.log(userId, "SCENE_ACTIVATE", "激活场景: " + scene.getName(), null);
     }
     

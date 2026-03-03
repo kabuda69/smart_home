@@ -17,6 +17,7 @@ public class DataInitializer implements CommandLineRunner {
     
     @Override
     public void run(String... args) {
+        //初始化默认管理员账户
         // 创建管理员账户（明文密码）
         if (!userRepository.existsByUsername("admin")) {
             User admin = new User();

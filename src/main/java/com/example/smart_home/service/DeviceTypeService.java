@@ -27,7 +27,7 @@ public class DeviceTypeService {
         }
         return deviceTypeRepository.save(type);
     }
-    
+    //
     @Transactional
     public DeviceType updateType(Long id, DeviceType type) {
         DeviceType existing = getType(id);

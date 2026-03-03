@@ -12,12 +12,13 @@ import java.util.List;
 public class DeviceTypeController {
     @Autowired
     private DeviceTypeService deviceTypeService;
-    
+    //设备类型查询模块
+    //查询系统中所有设备类型（如灯、空调、窗帘、传感器等）
     @GetMapping
     public ApiResponse<List<DeviceType>> getAllTypes() {
         return ApiResponse.success(deviceTypeService.getAllTypes());
     }
-    
+    //根据ID查询单个设备类型的详情
     @GetMapping("/{id}")
     public ApiResponse<DeviceType> getType(@PathVariable Long id) {
         return ApiResponse.success(deviceTypeService.getType(id));

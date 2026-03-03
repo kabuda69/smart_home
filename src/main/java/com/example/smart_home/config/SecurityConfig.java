@@ -30,31 +30,31 @@ public class SecurityConfig {
         // 使用明文密码（不加密）
         return NoOpPasswordEncoder.getInstance();
     }
-    
+    //放行接口
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors().and().csrf().disable()
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and()
             .authorizeRequests()
-            .antMatchers("/api/auth/**", "/ws/**").permitAll()
-            .antMatchers(org.springframework.http.HttpMethod.GET, "/api/share/**").permitAll()
-            .antMatchers(org.springframework.http.HttpMethod.GET, "/api/device-types", "/api/device-types/**").permitAll()
-            .antMatchers("/api/admin/**").hasRole("ADMIN")
-            .anyRequest().authenticated()
+            .antMatchers("/api/auth/**", "/ws/**").permitAll()// 放行所有方法
+            .antMatchers(org.springframework.http.HttpMethod.GET, "/api/share/**").permitAll() // 仅放行 GET
+            .antMatchers(org.springframework.http.HttpMethod.GET, "/api/device-types", "/api/device-types/**").permitAll()// 仅放行 GET
+            .antMatchers("/api/admin/**").hasRole("ADMIN")// 需 ADMIN 角色
+            .anyRequest().authenticated()// 其他所有请求需认证
             .and()
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
-    
+    //认证接口
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList("http://localhost:8081"));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(Arrays.asList("*"));
-        config.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        config.setAllowedOrigins(Arrays.asList("http://localhost:8081"));//允许的源
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));//允许的HTTP方法
+        config.setAllowedHeaders(Arrays.asList("*"));//允许的请求头
+        config.setAllowCredentials(true);//是否允许发送 Cookie/凭证
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();//将配置应用到所有路径
         source.registerCorsConfiguration("/**", config);
         return source;
     }

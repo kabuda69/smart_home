@@ -22,61 +22,59 @@ public class DeviceController {
     private DeviceService deviceService;
     @Autowired
     private StatusHistoryRepository statusHistoryRepository;
-    
+    // 获取当前用户绑定的所有设备列表
     @GetMapping
     public ApiResponse<List<DeviceDTO>> getMyDevices(Authentication auth) {
-        Long userId = (Long) auth.getPrincipal();
+        Long userId = (Long) auth.getPrincipal();// 权限校验：获取当前登录用户ID（身份认证）
         return ApiResponse.success(deviceService.getUserDevices(userId));
     }
-    
+    //获取指定ID的设备详情（需验证设备归属）
     @GetMapping("/{id}")
     public ApiResponse<DeviceDTO> getDevice(Authentication auth, @PathVariable Long id) {
-        Long userId = (Long) auth.getPrincipal();
-        return ApiResponse.success(deviceService.getDeviceWithAuth(id, userId));
+        Long userId = (Long) auth.getPrincipal(); // 权限校验：身份认证
+        return ApiResponse.success(deviceService.getDeviceWithAuth(id, userId));// 权限校验：设备归属验证
     }
-    
+    // 更新指定设备的信息（名称、描述等）
     @PutMapping("/{id}")
     public ApiResponse<DeviceDTO> updateDevice(Authentication auth, @PathVariable Long id, @RequestBody DeviceDTO dto) {
-        Long userId = (Long) auth.getPrincipal();
-        return ApiResponse.success("设备更新成功", deviceService.updateDevice(userId, id, dto));
+        Long userId = (Long) auth.getPrincipal();// 权限校验：身份认证
+        return ApiResponse.success("设备更新成功", deviceService.updateDevice(userId, id, dto));// 权限校验：Service层验证设备归属
     }
-    
+    //绑定新设备到当前用户
     @PostMapping
     public ApiResponse<DeviceDTO> bindDevice(Authentication auth, @RequestBody DeviceDTO dto) {
-        Long userId = (Long) auth.getPrincipal();
-        return ApiResponse.success("设备绑定成功", deviceService.bindDevice(userId, dto));
+        Long userId = (Long) auth.getPrincipal();// 权限校验：身份认证
+        return ApiResponse.success("设备绑定成功", deviceService.bindDevice(userId, dto));// 权限校验：Service层绑定当前用户
     }
-    
+    //向指定设备发送控制命令（如开关、调节等）
     @PostMapping("/command")
     public ApiResponse<DeviceDTO> executeCommand(Authentication auth, @Valid @RequestBody CommandRequest request) {
-        Long userId = (Long) auth.getPrincipal();
-        return ApiResponse.success(deviceService.executeCommand(userId, request));
+        Long userId = (Long) auth.getPrincipal();// 权限校验：身份认证
+        return ApiResponse.success(deviceService.executeCommand(userId, request));// 权限校验：Service层验证设备归属
     }
-    
+    // 删除指定ID的设备
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteDevice(Authentication auth, @PathVariable Long id) {
-        Long userId = (Long) auth.getPrincipal();
-        deviceService.deleteDevice(id, userId);
+        Long userId = (Long) auth.getPrincipal();// 权限校验：身份认证
+        deviceService.deleteDevice(id, userId);// 权限校验：Service层验证设备归属
         return ApiResponse.success("设备删除成功", null);
     }
-    
+    // 获取设备状态历史记录（分页）
     @GetMapping("/{id}/history")
     public ApiResponse<Page<StatusHistoryDTO>> getHistory(Authentication auth, @PathVariable Long id,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        Long userId = (Long) auth.getPrincipal();
-        // 验证设备归属
-        deviceService.getDeviceWithAuth(id, userId);
+        Long userId = (Long) auth.getPrincipal(); // 权限校验：身份认证
+        deviceService.getDeviceWithAuth(id, userId);  // 权限校验：验证设备归属（非当前用户设备会抛异常）
         Page<StatusHistory> historyPage = statusHistoryRepository.findByDeviceIdOrderByRecordedAtDesc(id, PageRequest.of(page, size));
         return ApiResponse.success(historyPage.map(this::toHistoryDTO));
     }
-    
+    //获取指定时间范围内的设备状态历史，额外校验：@DateTimeFormat 校验时间参数格式合法性
     @GetMapping("/{id}/history/range")
     public ApiResponse<List<StatusHistoryDTO>> getHistoryByRange(Authentication auth, @PathVariable Long id,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
-        Long userId = (Long) auth.getPrincipal();
-        // 验证设备归属
-        deviceService.getDeviceWithAuth(id, userId);
+        Long userId = (Long) auth.getPrincipal();// 权限校验：身份认证
+        deviceService.getDeviceWithAuth(id, userId);// 权限校验：验证设备归属（非当前用户设备会抛异常）
         List<StatusHistory> historyList = statusHistoryRepository.findByDeviceIdAndTimeRange(id, start, end);
         return ApiResponse.success(historyList.stream().map(this::toHistoryDTO).collect(Collectors.toList()));
     }

@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.*;
 public class StatisticsController {
     @Autowired
     private StatisticsService statisticsService;
-    
+    //数据统计查询模块
+    //查询当前登录用户的个性化统计数据（如设备在线数、场景执行次数、能耗统计等）
     @GetMapping
     public ApiResponse<StatisticsDTO> getStatistics(Authentication auth) {
         Long userId = (Long) auth.getPrincipal();

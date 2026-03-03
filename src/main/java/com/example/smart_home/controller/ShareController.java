@@ -12,7 +12,8 @@ import java.util.Map;
 public class ShareController {
     @Autowired
     private ShareService shareService;
-    
+    //分享链接创建模块
+    //当前登录用户创建设备分享链接（供他人查看设备快照）
     @PostMapping
     public ApiResponse<String> createShareLink(Authentication auth, @RequestBody Map<String, Object> body) {
         Long userId = (Long) auth.getPrincipal();
@@ -21,7 +22,8 @@ public class ShareController {
         String uuid = shareService.createShareLink(userId, deviceId, expireHours);
         return ApiResponse.success("分享链接创建成功", uuid);
     }
-    
+    //分享快照查询模块
+    //通过分享链接UUID查询设备的快照信息（无需登录）
     @GetMapping("/{uuid}")
     public ApiResponse<Map<String, Object>> getSharedSnapshot(@PathVariable String uuid) {
         return ApiResponse.success(shareService.getSharedSnapshot(uuid));

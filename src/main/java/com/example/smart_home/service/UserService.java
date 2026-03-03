@@ -26,7 +26,7 @@ public class UserService {
     private JwtUtil jwtUtil;
     @Autowired
     private LogService logService;
-    
+    //
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
