@@ -57,6 +57,15 @@
               </tr>
             </tbody>
           </table>
+          <div class="pagination" v-if="logTotalPages > 1">
+            <button class="page-btn" :disabled="logPage === 0" @click="logPage--; loadLogs()">
+              <span class="mdi mdi-chevron-left"></span>
+            </button>
+            <span class="page-info">{{ logPage + 1 }} / {{ logTotalPages }}</span>
+            <button class="page-btn" :disabled="logPage >= logTotalPages - 1" @click="logPage++; loadLogs()">
+              <span class="mdi mdi-chevron-right"></span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -98,7 +107,9 @@ export default {
       editingType: { name: '', description: '', icon: '', paramTemplate: '{}' },
       replyingFeedback: null, replyContent: '',
       snackbar: { show: false, text: '', color: 'success' },
-      tabs: [{ name: '用户', icon: 'mdi-account-group' }, { name: '设备类型', icon: 'mdi-shape' }, { name: '反馈', icon: 'mdi-message-text' }, { name: '日志', icon: 'mdi-file-document' }]
+      tabs: [{ name: '用户', icon: 'mdi-account-group' }, { name: '设备类型', icon: 'mdi-shape' }, { name: '反馈', icon: 'mdi-message-text' }, { name: '日志', icon: 'mdi-file-document' }],
+      logPage: 0,
+      logTotalPages: 1
     }
   },
   watch: { tab: function() { this.loadTabData() } },
@@ -108,7 +119,16 @@ export default {
     loadUsers: function() { var self = this; this.$axios.get('/api/admin/users').then(function(r) { if (r.data.success) self.users = r.data.data }) },
     loadTypes: function() { var self = this; this.$axios.get('/api/admin/device-types').then(function(r) { if (r.data.success) self.deviceTypes = r.data.data }) },
     loadFeedbacks: function() { var self = this; this.$axios.get('/api/admin/feedbacks', { params: { page: 0, size: 20 } }).then(function(r) { if (r.data.success) self.feedbacks = r.data.data.content }) },
-    loadLogs: function() { var self = this; this.$axios.get('/api/admin/logs', { params: { page: 0, size: 20 } }).then(function(r) { if (r.data.success) self.logs = r.data.data.content }) },
+    loadLogs: function() { 
+      var self = this; 
+      var params = { page: this.logPage, size: 20 };
+      this.$axios.get('/api/admin/logs', { params: params }).then(function(r) { 
+        if (r.data.success) {
+          self.logs = r.data.data.content;
+          self.logTotalPages = r.data.data.totalPages;
+        } 
+      }) 
+    },
     toggleUser: function(u) { var self = this; this.$axios.put('/api/admin/users/' + u.id + '/status', { enabled: !u.enabled }).then(function() { self.loadUsers(); self.showMsg(u.enabled ? '已禁用' : '已启用', 'success') }) },
     editType: function(t) { this.editingType = Object.assign({}, t); this.showTypeDialog = true },
     saveType: function() { var self = this; var p = this.editingType.id ? this.$axios.put('/api/admin/device-types/' + this.editingType.id, this.editingType) : this.$axios.post('/api/admin/device-types', this.editingType); p.then(function() { self.showTypeDialog = false; self.editingType = { name: '', description: '', icon: '', paramTemplate: '{}' }; self.loadTypes(); self.showMsg('已保存', 'success') }) },
@@ -149,6 +169,12 @@ export default {
 .action-btn:hover { background: #667eea; color: #fff; }
 .action-btn.danger:hover { background: #e53935; }
 .action-btn.success:hover { background: #4caf50; }
+
+.pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
+.page-btn { width: 36px; height: 36px; border: 1px solid #ddd; background: #fff; border-radius: 6px; color: #666; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.page-btn:hover:not(:disabled) { background: #667eea; color: #fff; border-color: #667eea; }
+.page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.page-info { font-size: 14px; color: #666; }
 
 .dialog-box { background: #fff; border-radius: 12px; overflow: hidden; }
 .dialog-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid #f0f0f0; }

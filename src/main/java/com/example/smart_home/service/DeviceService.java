@@ -14,42 +14,73 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 设备服务
+ * 处理设备相关的业务逻辑，包括设备管理、命令执行、状态监控等
+ */
 @Service
 public class DeviceService {
+    
     @Autowired
     private DeviceRepository deviceRepository;
+    
     @Autowired
     private DeviceTypeRepository deviceTypeRepository;
+    
     @Autowired
     private CommandRepository commandRepository;
+    
     @Autowired
     private StatusHistoryRepository statusHistoryRepository;
+    
     @Autowired
     private AlertRepository alertRepository;
+    
     @Autowired
     private UserRepository userRepository;
+    
     @Autowired
     private NotificationPreferenceRepository notificationPrefRepository;
+    
     @Autowired
     private SceneActionRepository sceneActionRepository;
+    
     @Autowired
     private SharedSnapshotRepository sharedSnapshotRepository;
+    
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+    
     @Autowired
     private LogService logService;
     
+    /**
+     * 获取用户的所有设备列表
+     * @param userId 用户ID
+     * @return 设备DTO列表
+     */
     public List<DeviceDTO> getUserDevices(Long userId) {
         return deviceRepository.findByUserId(userId).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
     
+    /**
+     * 获取指定设备详情
+     * @param deviceId 设备ID
+     * @return 设备DTO
+     */
     public DeviceDTO getDevice(Long deviceId) {
         return toDTO(deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new RuntimeException("设备不存在")));
     }
     
+    /**
+     * 获取指定设备详情并验证用户权限
+     * @param deviceId 设备ID
+     * @param userId 用户ID
+     * @return 设备DTO
+     */
     public DeviceDTO getDeviceWithAuth(Long deviceId, Long userId) {
         Device device = deviceRepository.findById(deviceId)
                 .orElseThrow(() -> new RuntimeException("设备不存在"));
@@ -59,6 +90,13 @@ public class DeviceService {
         return toDTO(device);
     }
     
+    /**
+     * 更新设备信息
+     * @param userId 用户ID
+     * @param deviceId 设备ID
+     * @param dto 设备更新信息
+     * @return 更新后的设备DTO
+     */
     @Transactional
     public DeviceDTO updateDevice(Long userId, Long deviceId, DeviceDTO dto) {
         Device device = deviceRepository.findById(deviceId)
@@ -85,6 +123,12 @@ public class DeviceService {
         return toDTO(device);
     }
     
+    /**
+     * 绑定新设备到用户
+     * @param userId 用户ID
+     * @param dto 设备信息
+     * @return 绑定后的设备DTO
+     */
     @Transactional
     public DeviceDTO bindDevice(Long userId, DeviceDTO dto) {
         User user = userRepository.findById(userId)
@@ -109,6 +153,12 @@ public class DeviceService {
         return toDTO(device);
     }
     
+    /**
+     * 执行设备控制命令
+     * @param userId 用户ID
+     * @param request 命令请求
+     * @return 执行命令后的设备DTO
+     */
     @Transactional
     public DeviceDTO executeCommand(Long userId, CommandRequest request) {
         Device device = deviceRepository.findById(request.getDeviceId())
@@ -187,7 +237,14 @@ public class DeviceService {
         
         return dto;
     }
-    // 核心阈值判断逻辑
+    
+    /**
+     * 核心阈值判断逻辑
+     * 检查设备数值是否超出阈值范围，如果超出则创建警报并通知用户
+     * @param device 设备
+     * @param value 当前数值
+     * @param user 用户
+     */
     private void checkThresholdAndAlert(Device device, Double value, User user) {
         boolean exceeded = false;
         String message = "";
@@ -244,6 +301,11 @@ public class DeviceService {
         }
     }
     
+    /**
+     * 删除设备
+     * @param deviceId 设备ID
+     * @param userId 用户ID
+     */
     @Transactional
     public void deleteDevice(Long deviceId, Long userId) {
         Device device = deviceRepository.findById(deviceId)
@@ -272,6 +334,11 @@ public class DeviceService {
         logService.log(userId, "DEVICE_DELETE", "删除设备: " + deviceName, null);
     }
     
+    /**
+     * 将Device实体转换为DeviceDTO
+     * @param device 设备实体
+     * @return 设备DTO
+     */
     private DeviceDTO toDTO(Device device) {
         DeviceDTO dto = new DeviceDTO();
         dto.setId(device.getId());

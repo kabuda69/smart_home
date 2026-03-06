@@ -17,20 +17,37 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 
+/**
+ * 安全配置类
+ * 配置Spring Security相关设置，包括认证、授权、CORS等
+ */
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
+    
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
     
+    /**
+     * 密码编码器
+     * 使用明文密码（不加密）
+     * @return 密码编码器
+     */
     @SuppressWarnings("deprecation")
     @Bean
     public PasswordEncoder passwordEncoder() {
         // 使用明文密码（不加密）
         return NoOpPasswordEncoder.getInstance();
     }
-    //放行接口
+    
+    /**
+     * 安全过滤器链
+     * 配置HTTP安全规则，包括接口放行、授权等
+     * @param http HTTP安全对象
+     * @return 安全过滤器链
+     * @throws Exception 异常
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors().and().csrf().disable()
@@ -46,7 +63,12 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
-    //认证接口
+    
+    /**
+     * CORS配置源
+     * 配置跨域资源共享
+     * @return CORS配置源
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();

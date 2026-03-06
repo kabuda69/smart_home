@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
 
 @Service
 public class LogService {
@@ -26,13 +27,36 @@ public class LogService {
         log.setIpAddress(ip);
         logRepository.save(log);
     }
-    //
+    
     public Page<LogDTO> getUserLogs(Long userId, Pageable pageable) {
         return logRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable).map(this::toDTO);
     }
     
+    /**
+     * 按时间段查询用户日志
+     * @param userId 用户ID
+     * @param startTime 开始时间
+     * @param endTime 结束时间
+     * @param pageable 分页参数
+     * @return 日志分页结果
+     */
+    public Page<LogDTO> getUserLogsByTimeRange(Long userId, LocalDateTime startTime, LocalDateTime endTime, Pageable pageable) {
+        return logRepository.findByUserIdAndCreatedAtBetween(userId, startTime, endTime, pageable).map(this::toDTO);
+    }
+    
     public Page<LogDTO> getAllLogs(Pageable pageable) {
         return logRepository.findAllByOrderByCreatedAtDesc(pageable).map(this::toDTO);
+    }
+    
+    /**
+     * 按时间段查询所有日志
+     * @param startTime 开始时间
+     * @param endTime 结束时间
+     * @param pageable 分页参数
+     * @return 日志分页结果
+     */
+    public Page<LogDTO> getAllLogsByTimeRange(LocalDateTime startTime, LocalDateTime endTime, Pageable pageable) {
+        return logRepository.findByCreatedAtBetween(startTime, endTime, pageable).map(this::toDTO);
     }
     
     private LogDTO toDTO(Log log) {

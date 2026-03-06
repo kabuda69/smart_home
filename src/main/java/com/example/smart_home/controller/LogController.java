@@ -8,18 +8,32 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @RestController
 @RequestMapping("/api/logs")
 public class LogController {
     @Autowired
     private LogService logService;
+    
     //日志查询模块
     //分页查询当前登录用户的所有操作日志（如设备控制、反馈提交、账号操作等）
     @GetMapping
     public ApiResponse<Page<LogDTO>> getMyLogs(Authentication auth,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") int page, 
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime) {
         Long userId = (Long) auth.getPrincipal();
+        
+        if (startTime != null && endTime != null) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+            LocalDateTime start = LocalDateTime.parse(startTime, formatter);
+            LocalDateTime end = LocalDateTime.parse(endTime, formatter);
+            return ApiResponse.success(logService.getUserLogsByTimeRange(userId, start, end, PageRequest.of(page, size)));
+        }
+        
         return ApiResponse.success(logService.getUserLogs(userId, PageRequest.of(page, size)));
     }
 }

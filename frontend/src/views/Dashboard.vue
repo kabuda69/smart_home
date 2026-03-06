@@ -32,7 +32,7 @@
           <span class="mdi mdi-wifi"></span>
         </div>
         <div class="stat-info">
-          <span class="stat-value">{{ stats.onlineDevices || 0 }}</span>
+          <span class="stat-value">{{ onlineDeviceCount }}</span>
           <span class="stat-label">在线设备</span>
         </div>
       </div>
@@ -216,6 +216,9 @@ export default {
       if (hour < 18) return '下午好'
       if (hour < 22) return '晚上好'
       return '夜深了'
+    },
+    onlineDeviceCount: function() {
+      return this.devices.filter(function(d) { return d.powerState === true }).length
     }
   },
   mounted: function() {

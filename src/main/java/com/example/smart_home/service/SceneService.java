@@ -12,27 +12,48 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 场景服务
+ * 处理智能场景相关的业务逻辑，包括场景的创建、查询、更新、激活、停用和删除等操作
+ */
 @Service
 public class SceneService {
+    
     @Autowired
     private SceneRepository sceneRepository;
+    
     @Autowired
     private SceneActionRepository sceneActionRepository;
+    
     @Autowired
     private DeviceRepository deviceRepository;
+    
     @Autowired
     private UserRepository userRepository;
+    
     @Autowired
     private DeviceService deviceService;
+    
     @Autowired
     private LogService logService;
     
+    /**
+     * 获取用户的所有场景列表
+     * @param userId 用户ID
+     * @return 场景DTO列表
+     */
     public List<SceneDTO> getUserScenes(Long userId) {
         return sceneRepository.findByUserId(userId).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
     
+    /**
+     * 获取指定场景详情并验证用户权限
+     * @param sceneId 场景ID
+     * @param userId 用户ID
+     * @return 场景DTO
+     */
     public SceneDTO getScene(Long sceneId, Long userId) {
         Scene scene = sceneRepository.findById(sceneId)
                 .orElseThrow(() -> new RuntimeException("场景不存在"));
@@ -42,11 +63,22 @@ public class SceneService {
         return toDTO(scene);
     }
     
+    /**
+     * 获取指定场景详情
+     * @param sceneId 场景ID
+     * @return 场景DTO
+     */
     public SceneDTO getScene(Long sceneId) {
         return toDTO(sceneRepository.findById(sceneId)
                 .orElseThrow(() -> new RuntimeException("场景不存在")));
     }
-    //
+    
+    /**
+     * 创建新场景
+     * @param userId 用户ID
+     * @param dto 场景信息
+     * @return 创建后的场景DTO
+     */
     @Transactional
     public SceneDTO createScene(Long userId, SceneDTO dto) {
         User user = userRepository.findById(userId)
@@ -86,6 +118,13 @@ public class SceneService {
         return toDTO(sceneRepository.findById(scene.getId()).get());
     }
     
+    /**
+     * 更新场景信息
+     * @param userId 用户ID
+     * @param sceneId 场景ID
+     * @param dto 场景更新信息
+     * @return 更新后的场景DTO
+     */
     @Transactional
     public SceneDTO updateScene(Long userId, Long sceneId, SceneDTO dto) {
         Scene scene = sceneRepository.findById(sceneId)
@@ -123,6 +162,11 @@ public class SceneService {
         return toDTO(scene);
     }
     
+    /**
+     * 激活场景
+     * @param userId 用户ID
+     * @param sceneId 场景ID
+     */
     @Transactional
     public void activateScene(Long userId, Long sceneId) {
         Scene scene = sceneRepository.findById(sceneId)
@@ -165,6 +209,11 @@ public class SceneService {
         logService.log(userId, "SCENE_ACTIVATE", "激活场景: " + scene.getName(), null);
     }
     
+    /**
+     * 停用场景
+     * @param userId 用户ID
+     * @param sceneId 场景ID
+     */
     @Transactional
     public void deactivateScene(Long userId, Long sceneId) {
         Scene scene = sceneRepository.findById(sceneId)
@@ -178,6 +227,11 @@ public class SceneService {
         sceneRepository.save(scene);
     }
     
+    /**
+     * 删除场景
+     * @param userId 用户ID
+     * @param sceneId 场景ID
+     */
     @Transactional
     public void deleteScene(Long userId, Long sceneId) {
         Scene scene = sceneRepository.findById(sceneId)
@@ -194,6 +248,11 @@ public class SceneService {
         logService.log(userId, "SCENE_DELETE", "删除场景: " + sceneName, null);
     }
     
+    /**
+     * 将Scene实体转换为SceneDTO
+     * @param scene 场景实体
+     * @return 场景DTO
+     */
     private SceneDTO toDTO(Scene scene) {
         SceneDTO dto = new SceneDTO();
         dto.setId(scene.getId());

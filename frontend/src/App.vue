@@ -54,7 +54,13 @@
       <main class="main-content">
         <div class="page-header">
           <h1 class="page-title">{{ currentPageTitle }}</h1>
-          <p class="page-date">{{ currentDate }}</p>
+          <div class="header-right">
+            <span class="online-status">
+              <span class="status-dot online"></span>
+              在线设备: {{ onlineDeviceCount }}
+            </span>
+            <p class="page-date">{{ currentDate }}</p>
+          </div>
         </div>
         <div class="page-body">
           <router-view></router-view>
@@ -71,6 +77,47 @@
     <v-snackbar v-model="snackbar.show" :color="snackbar.color" top right timeout="3000">
       {{ snackbar.text }}
     </v-snackbar>
+
+    <!-- 告警弹窗 -->
+    <div v-if="showAlertDialog" class="alert-overlay">
+      <div class="alert-dialog">
+        <div class="alert-header">
+          <div class="alert-icon-wrapper">
+            <span class="mdi mdi-alert-circle alert-icon"></span>
+          </div>
+          <h3>设备告警</h3>
+          <p class="alert-subtitle">请立即处理！</p>
+        </div>
+        <div class="alert-body">
+          <div class="alert-detail">
+            <span class="detail-label">设备名称:</span>
+            <span class="detail-value">{{ currentAlert.deviceName || '-' }}</span>
+          </div>
+          <div class="alert-detail">
+            <span class="detail-label">设备 ID:</span>
+            <span class="detail-value">{{ currentAlert.deviceId || '-' }}</span>
+          </div>
+          <div class="alert-detail">
+            <span class="detail-label">告警类型:</span>
+            <span class="detail-value alert-type">{{ getAlertTypeText(currentAlert.alertType || currentAlert.type) }}</span>
+          </div>
+          <div class="alert-detail">
+            <span class="detail-label">告警时间:</span>
+            <span class="detail-value">{{ currentAlert.time ? new Date(currentAlert.time).toLocaleString('zh-CN') : '-' }}</span>
+          </div>
+          <div class="alert-detail full-width">
+            <span class="detail-label">告警内容:</span>
+            <span class="detail-value alert-message">{{ currentAlert.message || '-' }}</span>
+          </div>
+        </div>
+        <div class="alert-footer">
+          <button class="btn-confirm" @click="closeAlertDialog">
+            <span class="mdi mdi-check-circle"></span>
+            我知道了
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -86,11 +133,14 @@ export default {
       stompClient: null,
       connected: false,
       snackbar: { show: false, text: '', color: 'primary' },
-      currentDate: ''
+      currentDate: '',
+      showAlertDialog: false,
+      currentAlert: {},
+      lastAlertId: null  // 记录上次弹窗的告警 ID，避免重复弹窗
     }
   },
   computed: {
-    ...mapState(['user', 'unreadAlertCount']),
+    ...mapState(['user', 'unreadAlertCount', 'devices']),
     isLoggedIn: function() {
       return !!this.user
     },
@@ -130,6 +180,9 @@ export default {
         items.push({ title: '管理后台', icon: 'mdi-shield-crown', to: '/admin' })
       }
       return items
+    },
+    onlineDeviceCount: function() {
+      return this.devices.filter(function(d) { return d.powerState === true }).length
     }
   },
   watch: {
@@ -161,28 +214,101 @@ export default {
       var self = this
       if (this.connected || !this.user) return
       try {
+        console.log('开始连接 WebSocket...')
         var socket = new SockJS('/ws')
         this.stompClient = Stomp.over(socket)
         this.stompClient.debug = null
         this.stompClient.connect({}, function() {
+          console.log('WebSocket 连接成功')
           self.connected = true
           self.stompClient.subscribe('/topic/alerts/' + self.user.id, function(msg) {
+            console.log('收到告警消息:', msg.body)
             try {
               var alert = JSON.parse(msg.body)
-              self.snackbar = { show: true, text: alert.message || '收到新警报', color: 'warning' }
-              self.$store.dispatch('fetchAlerts')
-            } catch (e) { /* ignore */ }
+              self.handleNewAlert(alert)
+            } catch (e) { 
+              console.error('解析告警消息失败:', e)
+            }
           })
           self.stompClient.subscribe('/topic/devices/' + self.user.id, function(msg) {
             try {
+              console.log('收到设备更新:', msg.body)
               self.$store.commit('UPDATE_DEVICE', JSON.parse(msg.body))
             } catch (e) { /* ignore */ }
           })
         }, function() {
+          console.log('WebSocket 连接失败，5 秒后重试')
           self.connected = false
           setTimeout(function() { self.connectWebSocket() }, 5000)
         })
-      } catch (e) { /* ignore */ }
+      } catch (e) { 
+        console.error('WebSocket 连接异常:', e)
+      }
+    },
+    handleNewAlert: function(alert) {
+      console.log('====== 收到告警 ======')
+      console.log('告警详情:', alert)
+      
+      // 兼容后端发送的字段：type 或 alertType
+      var alertType = alert.alertType || alert.type
+      console.log('告警类型:', alertType)
+      console.log('上次告警 ID:', this.lastAlertId)
+      console.log('当前告警 ID:', alert.id)
+      
+      // 只处理阈值超限的告警（THRESHOLD_EXCEEDED）
+      if (alertType !== 'THRESHOLD_EXCEEDED') {
+        console.log('非阈值超限告警，不弹窗')
+        this.$store.dispatch('fetchAlerts')
+        return
+      }
+      
+      // 如果是相同的告警 ID，不重复弹窗
+      if (this.lastAlertId === alert.id) {
+        console.log('重复告警，不弹窗')
+        return
+      }
+      
+      console.log('开始播放提示音...')
+      this.playAlertSound()
+      
+      console.log('设置弹窗显示...')
+      this.currentAlert = alert
+      this.currentAlert.alertType = alertType  // 确保 alertType 字段存在
+      this.showAlertDialog = true
+      this.lastAlertId = alert.id
+      
+      console.log('弹窗已显示，告警 ID:', alert.id)
+      this.$store.dispatch('fetchAlerts')
+    },
+    getAlertTypeText: function(type) {
+      var typeMap = {
+        'THRESHOLD_EXCEEDED': '阈值超限',
+        'DEVICE_OFFLINE': '设备离线',
+        'DEVICE_ERROR': '设备故障'
+      }
+      return typeMap[type] || type || '-'
+    },
+    playAlertSound: function() {
+      try {
+        var audioContext = new (window.AudioContext || window.webkitAudioContext)()
+        var oscillator = audioContext.createOscillator()
+        var gainNode = audioContext.createGain()
+        oscillator.connect(gainNode)
+        gainNode.connect(audioContext.destination)
+        oscillator.frequency.value = 800
+        oscillator.type = 'sine'
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+        oscillator.start(audioContext.currentTime)
+        oscillator.stop(audioContext.currentTime + 0.5)
+      } catch (e) {
+        console.log('无法播放提示音')
+      }
+    },
+    closeAlertDialog: function() {
+      this.showAlertDialog = false
+      this.lastAlertId = null  // 清空记录，允许下次弹窗
+      console.log('关闭告警弹窗，已清空记录，等待下次告警')
     },
     disconnectWebSocket: function() {
       if (this.stompClient && this.connected) {
@@ -416,6 +542,9 @@ html, body {
 .page-header {
   padding: 20px 24px;
   background: #f5f6fa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .page-title {
@@ -423,6 +552,20 @@ html, body {
   font-weight: 600;
   color: #1a1a1a;
   margin: 0 0 4px 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.online-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #666;
 }
 
 .page-date {
@@ -467,5 +610,190 @@ html, body {
 
 .v-application--wrap {
   min-height: auto !important;
+}
+
+/* 告警弹窗 - 居中显示 */
+.alert-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.alert-dialog {
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), pulse 2s ease-in-out infinite;
+  border: 4px solid #ff5722;
+  width: 90%;
+  max-width: 400px;
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 25px 50px -12px rgba(255, 87, 34, 0.5);
+  }
+  50% {
+    box-shadow: 0 25px 50px -12px rgba(255, 87, 34, 0.8), 0 0 0 10px rgba(255, 87, 34, 0.1);
+  }
+}
+
+/* 告警头部 */
+.alert-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 24px;
+  background: linear-gradient(135deg, #ff5722 0%, #e91e63 100%);
+  color: #fff;
+  text-align: center;
+}
+
+.alert-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.alert-icon {
+  font-size: 48px;
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px) rotate(-5deg);
+  }
+  75% {
+    transform: translateX(5px) rotate(5deg);
+  }
+}
+
+.alert-header h3 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.alert-subtitle {
+  margin: 0;
+  font-size: 16px;
+  opacity: 0.95;
+  font-weight: 500;
+}
+
+/* 告警内容区 */
+.alert-body {
+  padding: 32px 24px;
+  background: #fffbf8;
+}
+
+.alert-detail {
+  display: flex;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  border-left: 4px solid #ff9800;
+}
+
+.alert-detail.full-width {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-label {
+  font-size: 14px;
+  color: #888;
+  min-width: 90px;
+  font-weight: 600;
+}
+
+.detail-value {
+  font-size: 15px;
+  color: #333;
+  font-weight: 600;
+}
+
+.alert-type {
+  color: #e91e63;
+  font-size: 16px;
+}
+
+.alert-message {
+  color: #ff5722;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* 告警底部 */
+.alert-footer {
+  padding: 24px;
+  background: #fafafa;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-confirm {
+  padding: 14px 48px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.btn-confirm:active {
+  transform: translateY(0);
 }
 </style>

@@ -11,6 +11,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -77,10 +79,19 @@ public class AdminController {
     }
     
     // 日志查看模块
-    //分页查询系统所有操作日志
+    //分页查询系统所有操作日志（支持时间段筛选）
     @GetMapping("/logs")
     public ApiResponse<Page<LogDTO>> getAllLogs(
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") int page, 
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime) {
+        if (startTime != null && endTime != null) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+            LocalDateTime start = LocalDateTime.parse(startTime, formatter);
+            LocalDateTime end = LocalDateTime.parse(endTime, formatter);
+            return ApiResponse.success(logService.getAllLogsByTimeRange(start, end, PageRequest.of(page, size)));
+        }
         return ApiResponse.success(logService.getAllLogs(PageRequest.of(page, size)));
     }
 }

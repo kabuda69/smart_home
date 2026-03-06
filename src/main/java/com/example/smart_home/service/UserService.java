@@ -59,7 +59,8 @@ public class UserService {
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        // 明文密码比较（不使用加密）
+        if (!request.getPassword().equals(user.getPassword())) {
             throw new RuntimeException("密码错误");
         }
         if (!user.getEnabled()) {

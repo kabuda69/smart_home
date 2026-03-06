@@ -15,51 +15,102 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 设备控制器
+ * 处理设备相关的HTTP请求，包括设备列表获取、详情查询、更新、绑定、控制命令执行等
+ */
 @RestController
 @RequestMapping("/api/devices")
 public class DeviceController {
+    
     @Autowired
     private DeviceService deviceService;
+    
     @Autowired
     private StatusHistoryRepository statusHistoryRepository;
-    // 获取当前用户绑定的所有设备列表
+    
+    /**
+     * 获取当前用户绑定的所有设备列表
+     * @param auth 认证信息，用于获取当前登录用户ID
+     * @return 设备列表
+     */
     @GetMapping
     public ApiResponse<List<DeviceDTO>> getMyDevices(Authentication auth) {
         Long userId = (Long) auth.getPrincipal();// 权限校验：获取当前登录用户ID（身份认证）
         return ApiResponse.success(deviceService.getUserDevices(userId));
     }
-    //获取指定ID的设备详情（需验证设备归属）
+    
+    /**
+     * 获取指定ID的设备详情
+     * 需验证设备归属，确保用户只能访问自己的设备
+     * @param auth 认证信息，用于获取当前登录用户ID
+     * @param id 设备ID
+     * @return 设备详情
+     */
     @GetMapping("/{id}")
     public ApiResponse<DeviceDTO> getDevice(Authentication auth, @PathVariable Long id) {
         Long userId = (Long) auth.getPrincipal(); // 权限校验：身份认证
         return ApiResponse.success(deviceService.getDeviceWithAuth(id, userId));// 权限校验：设备归属验证
     }
-    // 更新指定设备的信息（名称、描述等）
+    
+    /**
+     * 更新指定设备的信息（名称、描述等）
+     * @param auth 认证信息，用于获取当前登录用户ID
+     * @param id 设备ID
+     * @param dto 设备更新信息
+     * @return 更新后的设备信息
+     */
     @PutMapping("/{id}")
     public ApiResponse<DeviceDTO> updateDevice(Authentication auth, @PathVariable Long id, @RequestBody DeviceDTO dto) {
         Long userId = (Long) auth.getPrincipal();// 权限校验：身份认证
         return ApiResponse.success("设备更新成功", deviceService.updateDevice(userId, id, dto));// 权限校验：Service层验证设备归属
     }
-    //绑定新设备到当前用户
+    
+    /**
+     * 绑定新设备到当前用户
+     * @param auth 认证信息，用于获取当前登录用户ID
+     * @param dto 设备信息
+     * @return 绑定后的设备信息
+     */
     @PostMapping
     public ApiResponse<DeviceDTO> bindDevice(Authentication auth, @RequestBody DeviceDTO dto) {
         Long userId = (Long) auth.getPrincipal();// 权限校验：身份认证
         return ApiResponse.success("设备绑定成功", deviceService.bindDevice(userId, dto));// 权限校验：Service层绑定当前用户
     }
-    //向指定设备发送控制命令（如开关、调节等）
+    
+    /**
+     * 向指定设备发送控制命令（如开关、调节等）
+     * @param auth 认证信息，用于获取当前登录用户ID
+     * @param request 控制命令请求
+     * @return 执行命令后的设备状态
+     */
     @PostMapping("/command")
     public ApiResponse<DeviceDTO> executeCommand(Authentication auth, @Valid @RequestBody CommandRequest request) {
         Long userId = (Long) auth.getPrincipal();// 权限校验：身份认证
         return ApiResponse.success(deviceService.executeCommand(userId, request));// 权限校验：Service层验证设备归属
     }
-    // 删除指定ID的设备
+    
+    /**
+     * 删除指定ID的设备
+     * @param auth 认证信息，用于获取当前登录用户ID
+     * @param id 设备ID
+     * @return 操作结果
+     */
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteDevice(Authentication auth, @PathVariable Long id) {
         Long userId = (Long) auth.getPrincipal();// 权限校验：身份认证
         deviceService.deleteDevice(id, userId);// 权限校验：Service层验证设备归属
         return ApiResponse.success("设备删除成功", null);
     }
-    // 获取设备状态历史记录（分页）
+    
+    /**
+     * 获取设备状态历史记录（分页）
+     * @param auth 认证信息，用于获取当前登录用户ID
+     * @param id 设备ID
+     * @param page 页码，默认0
+     * @param size 每页大小，默认20
+     * @return 设备状态历史记录分页数据
+     */
     @GetMapping("/{id}/history")
     public ApiResponse<Page<StatusHistoryDTO>> getHistory(Authentication auth, @PathVariable Long id,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
@@ -68,7 +119,15 @@ public class DeviceController {
         Page<StatusHistory> historyPage = statusHistoryRepository.findByDeviceIdOrderByRecordedAtDesc(id, PageRequest.of(page, size));
         return ApiResponse.success(historyPage.map(this::toHistoryDTO));
     }
-    //获取指定时间范围内的设备状态历史，额外校验：@DateTimeFormat 校验时间参数格式合法性
+    
+    /**
+     * 获取指定时间范围内的设备状态历史
+     * @param auth 认证信息，用于获取当前登录用户ID
+     * @param id 设备ID
+     * @param start 开始时间
+     * @param end 结束时间
+     * @return 设备状态历史记录列表
+     */
     @GetMapping("/{id}/history/range")
     public ApiResponse<List<StatusHistoryDTO>> getHistoryByRange(Authentication auth, @PathVariable Long id,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
@@ -79,6 +138,11 @@ public class DeviceController {
         return ApiResponse.success(historyList.stream().map(this::toHistoryDTO).collect(Collectors.toList()));
     }
     
+    /**
+     * 将StatusHistory实体转换为StatusHistoryDTO
+     * @param history 状态历史实体
+     * @return 状态历史DTO
+     */
     private StatusHistoryDTO toHistoryDTO(StatusHistory history) {
         StatusHistoryDTO dto = new StatusHistoryDTO();
         dto.setId(history.getId());
