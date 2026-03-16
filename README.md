@@ -1,5 +1,5 @@
 # 智能家居模拟控制系统
-
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kabuda69/smart_home)
 基于 Spring Boot + Vue 的智能家居控制系统。
 
 ## 技术栈
