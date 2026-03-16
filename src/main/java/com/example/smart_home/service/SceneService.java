@@ -197,10 +197,19 @@ public class SceneService {
                 cmd.setDeviceId(action.getDevice().getId());
                 cmd.setCommandType(action.getActionType());
                 cmd.setCommandValue(action.getActionValue());
-                // 4. 调用DeviceService执行单个命令（批量的核心：循环调用=批量）
+                
+                // 4. 特殊处理：如果是SET_VALUE命令且设备未开启，先开启设备
+                if ("SET_VALUE".equals(action.getActionType()) && !action.getDevice().getPowerState()) {
+                    CommandRequest powerOnCmd = new CommandRequest();
+                    powerOnCmd.setDeviceId(action.getDevice().getId());
+                    powerOnCmd.setCommandType("POWER_ON");
+                    deviceService.executeCommand(userId, powerOnCmd);
+                }
+                
+                // 5. 调用DeviceService执行单个命令（批量的核心：循环调用=批量）
                 deviceService.executeCommand(userId, cmd);
             } catch (Exception e) {
-                // 5.记录错误但继续执行其他动作
+                // 6.记录错误但继续执行其他动作
                 logService.log(userId, "SCENE_ACTION_ERROR", 
                         "场景动作执行失败: " + action.getDevice().getName() + " - " + e.getMessage(), null);
             }
